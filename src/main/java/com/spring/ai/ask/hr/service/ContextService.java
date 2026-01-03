@@ -10,6 +10,9 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.mistralai.MistralAiChatModel;
+import org.springframework.ai.reader.ExtractedTextFormatter;
+import org.springframework.ai.reader.pdf.ParagraphPdfDocumentReader;
+import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,30 +50,20 @@ public class ContextService {
     }
 
     public void initializePdfProcessing(String filePath) throws IOException {
-        PDDocument document = Loader.loadPDF(new RandomAccessReadBufferedFile(filePath));
-        PDFTextStripper pdfStripper = new PDFTextStripper();
-        for (int i = 1; i <= document.getNumberOfPages(); i++) {
-            pdfStripper.setStartPage(i);
-            pdfStripper.setEndPage(i);
-            String pdfText = pdfStripper.getText(document);
-            String cleanedText = pdfText.replaceAll("\\s+", " ").trim();
-            pdfTextContents.put("page_" + i, cleanedText);
-        }
-        document.close();
-        createDocuments();
+        createDocumentsFromPdf(filePath);
         System.out.println(pdfTextContents);
     }
 
-    private void createDocuments() {
+    private void createDocumentsFromPdf(String filePath) throws IOException {
         List<Document> documents = new ArrayList<>();
-        for (String pageKey : pdfTextContents.keySet()) {
-            Document doc = Document.builder()
-                    .id(pageKey)
-                    .text(pdfTextContents.get(pageKey))
-                    .metadata("source", filePath)
-                    .metadata("page", pageKey)
-                    .build();
-        }
+        ParagraphPdfDocumentReader pdfReader = new ParagraphPdfDocumentReader(filePath, PdfDocumentReaderConfig.builder()
+                .withPageTopMargin(0)
+                .withPageBottomMargin(0)
+                .withPagesPerDocument(1)
+                .withPageExtractedTextFormatter(ExtractedTextFormatter.builder()
+                        .build())
+                .build());
+
         vectorStore.add(documents);
     }
 

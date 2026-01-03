@@ -65,9 +65,8 @@
             <artifactId>spring-ai-advisors-vector-store</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.pdfbox</groupId>
-            <artifactId>pdfbox</artifactId>
-            <version>3.0.6</version>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pdf-document-reader</artifactId>
         </dependency>
     </dependencies>
     <dependencyManagement>
