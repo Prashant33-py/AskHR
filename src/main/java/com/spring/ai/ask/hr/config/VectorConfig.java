@@ -12,6 +12,19 @@ public class VectorConfig {
 
     @Bean
     public VectorStore getPgVectorStore(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel){
+        jdbcTemplate.execute("""
+                CREATE EXTENSION IF NOT EXISTS vector;
+                CREATE EXTENSION IF NOT EXISTS hstore;
+                
+                CREATE TABLE IF NOT EXISTS vector_store (
+                                                            id TEXT PRIMARY KEY,
+                                                            content TEXT,
+                                                            metadata JSONB,
+                                                            embedding VECTOR(1024)
+                    );
+                
+                CREATE INDEX IF NOT EXISTS vector_store_embedding_idx ON vector_store USING HNSW (embedding vector_cosine_ops);
+                """);
         return PgVectorStore.builder(jdbcTemplate, embeddingModel)
                 .dimensions(1024)
                 .build();
