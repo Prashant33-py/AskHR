@@ -4,6 +4,8 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.io.RandomAccessReadBufferedFile;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
@@ -17,7 +19,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
@@ -33,11 +37,12 @@ public class ContextService {
 
     private final Map<String, String> pdfTextContents = new LinkedHashMap<>();
 
-    @Value("${file.upload.path}")
     private String filePath;
 
     @Autowired
     private VectorStore vectorStore;
+
+    private final Logger logger = LoggerFactory.getLogger(ContextService.class);
 
     public ContextService(MistralAiChatModel chatModel){
         this.chatMemory = MessageWindowChatMemory.builder().build();
@@ -49,8 +54,10 @@ public class ContextService {
         return mistralChatClient.prompt(question).call().content();
     }
 
-    public void initializePdfProcessing(String filePath) throws IOException {
-        PDDocument document = Loader.loadPDF(new RandomAccessReadBufferedFile(filePath));
+    public void initializePdfProcessing(MultipartFile file) throws IOException {
+        PDDocument document = Loader.loadPDF(file.getBytes());
+        logger.info("Processing PDF File: {}", file.getOriginalFilename());
+        filePath = file.getName();
         PDFTextStripper pdfStripper = new PDFTextStripper();
         for (int i = 1; i <= document.getNumberOfPages(); i++) {
             pdfStripper.setStartPage(i);
@@ -90,9 +97,11 @@ public class ContextService {
         return documents;
     }
 
-    public void handlePdfUpload() throws MalformedURLException {
+    public void handlePdfUpload(List<MultipartFile> uploadedFiles) throws MalformedURLException {
         try {
-            initializePdfProcessing(filePath);
+            for (MultipartFile file : uploadedFiles) {
+                initializePdfProcessing(file);
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
