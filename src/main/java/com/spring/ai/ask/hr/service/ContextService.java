@@ -1,5 +1,6 @@
 package com.spring.ai.ask.hr.service;
 
+import com.spring.ai.ask.hr.exception.InvalidPromptException;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.io.RandomAccessReadBufferedFile;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -51,6 +52,9 @@ public class ContextService {
     }
 
     public String testApi(String question){
+        if (question == null || question.isEmpty()){
+            throw new InvalidPromptException("The question cannot be empty.");
+        }
         return mistralChatClient.prompt(question).call().content();
     }
 
@@ -97,13 +101,9 @@ public class ContextService {
         return documents;
     }
 
-    public void handlePdfUpload(List<MultipartFile> uploadedFiles) throws MalformedURLException {
-        try {
-            for (MultipartFile file : uploadedFiles) {
-                initializePdfProcessing(file);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+    public void handlePdfUpload(List<MultipartFile> uploadedFiles) throws IOException{
+        for (MultipartFile file : uploadedFiles) {
+            initializePdfProcessing(file);
         }
     }
 
